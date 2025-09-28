@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>최종 마우스 효과 (v7.7 - 점진적 크기 조절)</title>
+<title>최종 마우스 효과 (v10.4 - 완전 복원)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding&display=swap" rel="stylesheet">
+
 <script type="module" src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js"></script>
 <style>
   body {
@@ -21,51 +25,106 @@
     transform-origin: center center;
     transition: transform 0.05s linear, top 0.05s linear, left 0.05s linear;
   }
+  
   #cursor-image {
-    z-index: 10000;
-    transition: transform 0.05s linear, top 0.1s linear, left 0.1s linear;
+    z-index: 10002;
+    transition: transform 0.05s linear, top 0s linear, left 0s linear;
   }
+
   .trail-image {
-    z-index: 9999;
+    z-index: 10001;
     opacity: 0;
     transition: opacity 0.2s ease-out;
     filter: brightness(0);
   }
   .placed-item { opacity: 1; }
-  .placed-item.fading-out { animation: fadeOut 20s linear forwards; }
+  .placed-item.fading-out { animation: fadeOut 30s linear forwards; }
   @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+  /* --- 🎨 핫바(Hotbar) CSS --- */
+  
+  #hotbar-border {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    width: calc(100% - 260px);
+    height: 180px;
+    z-index: 9998;
+    background-color: white;
+    border-top: 3px solid black;
+    border-bottom: 3px solid black;
+    border-left: none;
+    border-right: none;
+    border-radius: 8px;
+    box-sizing: border-box;
+    pointer-events: none;
+  }
+
   #bottom-ui-container {
-    position: fixed; left: 20px; top: 50%; transform: translateY(-50%);
-    display: flex; flex-direction: column; align-items: center; gap: 10px;
-    z-index: 9999; background-color: white; padding: 10px 7px;
-    border: 1px solid black; border-radius: 8px;
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    width: calc(100% - 260px);
+    height: 180px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    box-sizing: border-box;
   }
+
   #hotbar-container {
-    display: flex; flex-direction: column; align-items: center; justify-content: center; width: 50px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
   }
-  #item-scroll-wrapper { height: 322px; width: 38px; overflow: hidden; }
-  #item-bar { display: flex; flex-direction: column; transition: transform 0.3s ease-in-out; }
+
+  #item-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
+    mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
+  }
+  #item-scroll-wrapper::-webkit-scrollbar {
+    display: none;
+  }
+  #item-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 50px 0; /* 👇 수정된 부분: 세로 움직임 방지 */
+    height: 100%;
+    box-sizing: border-box;
+  }
   .hotbar-item {
-    width: 38px; height: 38px; margin: 4px auto; background-color: white;
-    border: 1px solid black; object-fit: contain; image-rendering: pixelated;
-    transition: all 0.2s; box-sizing: border-box;
+    width: 80px;
+    height: 80px;
+    margin: 0 2px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    transition: transform 0.2s ease-in-out;
+    flex-shrink: 0;
+    transform-origin: center center;
+    transform: var(--base-transform, 'none');
   }
-  .hotbar-item:hover { border-color: #555; }
-  .hotbar-item.selected { border-color: #6495ED; transform: scale(1.05); }
-  .nav-arrow {
-    width: 38px; height: 20px; cursor: pointer; opacity: 0.7;
-    transition: opacity 0.2s; background-repeat: no-repeat;
-    background-position: center; background-size: contain; margin: 4px 0;
+  .hotbar-item:hover {
+    transform: var(--base-transform, 'none') scale(1.1);
   }
-  .nav-arrow:hover { opacity: 1; }
-  #up-arrow { background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3e%3cpolygon points='1,8 5,2 9,8' fill='black'/%3e%3c/svg%3e"); }
-  #down-arrow { background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3e%3cpolygon points='1,2 5,8 9,2' fill='black'/%3e%3c/svg%3e"); }
+  .hotbar-item.selected {
+    transform: var(--base-transform, 'none') scale(1.35);
+  }
+
   #loading-message {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
     font-family: sans-serif; font-size: 1.2em; padding: 20px;
     background-color: rgba(255, 255, 255, 0.8); border: 1px solid black;
     border-radius: 10px; z-index: 10002;
   }
+  
   #video-container {
     position: fixed;
     bottom: 10px;
@@ -73,10 +132,24 @@
     width: 240px;
     height: 180px;
     border-radius: 8px;
-    border: 2px solid black;
-    z-index: 10001;
+    z-index: 10000;
     overflow: hidden;
+    box-sizing: border-box;
   }
+  
+  #video-border {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    width: 240px;
+    height: 180px;
+    border-radius: 8px;
+    border: 3px solid black;
+    z-index: 10001;
+    pointer-events: none;
+    box-sizing: border-box;
+  }
+  
   #webcam, #overlay-canvas {
     position: absolute;
     top: 0;
@@ -85,9 +158,55 @@
     height: 100%;
     transform: scaleX(-1);
   }
+  
+  .roughen-effect {
+    filter: url(#roughen);
+  }
+
+  /* 👇 수정된 부분: 아이템 라벨 스타일 변경 */
+  #item-label {
+    position: absolute; /* fixed에서 absolute로 변경하여 아이템을 따라다니게 함 */
+    display: flex;
+    align-items: center;
+    font-family: 'Nanum Gothic Coding', monospace;
+    font-size: 14px; /* 크기 축소 */
+    font-weight: bold;
+    color: black;
+    z-index: 10000;
+    pointer-events: none;
+    
+    /* 부드럽게 나타나고 사라지는 효과 및 위치 이동 효과 */
+    opacity: 0;
+    transform: translateY(-50%); /* Y축 중앙 정렬 */
+    transition: opacity 0.3s ease, top 0.1s linear, left 0.1s linear, transform 0.1s linear;
+    visibility: hidden;
+  }
+  #item-label.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+  #item-label-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px; /* 크기 축소 */
+    height: 16px; /* 크기 축소 */
+    background-color: black;
+    color: white;
+    border-radius: 4px; /* 원에서 둥근 사각형으로 변경 */
+    margin-right: 8px;
+    font-size: 10px; /* 크기 축소 */
+  }
 </style>
 </head>
 <body>
+
+<svg style="position:absolute; height:0; width:0;">
+  <filter id="roughen">
+    <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" />
+  </filter>
+</svg>
 
 <img id="cursor-image">
 <div id="loading-message">인식 모델을 로딩 중입니다...</div>
@@ -96,14 +215,20 @@
   <video id="webcam" autoplay muted playsinline></video>
   <canvas id="overlay-canvas"></canvas>
 </div>
+<div id="video-border" class="roughen-effect"></div>
 
+<div id="hotbar-border" class="roughen-effect"></div>
 <div id="bottom-ui-container">
   <div id="hotbar-container">
-    <div id="up-arrow" class="nav-arrow"></div>
     <div id="item-scroll-wrapper"><div id="item-bar"></div></div>
-    <div id="down-arrow" class="nav-arrow"></div>
   </div>
 </div>
+
+<div id="item-label">
+  <span id="item-label-number"></span>
+  <span id="item-label-name"></span>
+</div>
+
 
 <script type="module">
   import { FaceLandmarker, HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js";
@@ -112,44 +237,101 @@
   const itemBar = document.getElementById('item-bar');
   const video = document.getElementById("webcam");
   const loadingMessage = document.getElementById("loading-message");
-  
+  const itemScrollWrapper = document.getElementById('item-scroll-wrapper');
   const canvas = document.getElementById("overlay-canvas");
   const canvasCtx = canvas.getContext("2d");
+  const itemLabel = document.getElementById('item-label');
+  const itemLabelNumber = document.getElementById('item-label-number');
+  const itemLabelName = document.getElementById('item-label-name');
 
-  const defaultCursorUrl = "data:image/svg+xml,%3csvg id='Layer_1' fill='black' xmlns='http://www.w3.org/2000/svg' version='1.1' viewBox='0 0 32 32'%3e%3cpath d='M31.87,28.2c-.2-.57-1.35-1.91-2.01-1.83l-9.73-8.72c-.24.48-.43-.13-.64-.19-.2-.05-.32.21-.51.13l-1.57-1.42c.35-.07.52-.43.7-.72.43-.69.89-1.73,1.05-2.53.02-.08.11-.24-.02-.27l-.73,1.99c-.11-.26.22-.69.31-.99.19-.63.18-1.44.48-1.96l.07-1.35c.11-.21.11-.08.12.06.01.47-.08.91-.1,1.36,0,.08-.02.28.11.22.44-2.76-.39-5.71-2.16-7.88l-.49-.46c.39.51.72,1.05,1.01,1.61-1.11-1.69-2.78-2.93-4.69-3.59-.02,0-.04-.02-.05-.02C9.85.14,5.95.59,3.27,2.9,1.17,4.72.05,7.22.04,9.77c-.11,1.12,0,2.27.35,3.4,1.49,4.83,6.83,7.49,11.91,5.92,1.29-.4,2.44-1.03,3.42-1.83-1.2,1.06-2.66,1.76-4.42,2.1-2.76.53-5.44.14-7.77-1.48-.06,0-.03.09,0,.12.15.19.97.69,1.22.84,3.55,2.08,8.12,1.69,11.29-.94l.21.1,1.42,1.32.83-1.01-.86.77-1.54-1.5.84-1.02c.09-.09.17-.09.29-.05.09.03,1.34,1.17,1.4,1.26.08.12.06.19.05.32l.41-.29c.24.34.46.63.87.36l9.48,8.69-.22.36c.35-.28.63-.01.45.37l.41-.29s-.1.16-.05.27c.26.56,2.01.95,1.46,1.99-.33.64-1.13.51-1.71.7l-.08.36c-.48.31-1.54-.55-1.81-.97l1.06-1.33c-.38.08-1.06,1.36-1.37,1.25l-.14-.28,1.64-1.93-.28.16-9.36-8.8-1.41,1.28c-.2.09-.54-.53-.57-.5v.48l9.67,9.39c.06.64,1.19,1.58,1.77,1.77,1.8.59,3.59-1.15,2.97-2.92h0ZM1.23,12.9C-.11,8.54,2.55,3.84,7.17,2.42c4.62-1.42,9.46.97,10.81,5.34,1.35,4.37-1.32,9.07-5.94,10.49s-9.46-.97-10.81-5.34h0Z'/%3e%3c/svg%3e";
-  const itemImageUrls = [ 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0909-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0910-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0911-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0912-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0913-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0914-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0915-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0916-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0917-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0918-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0919-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', 'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0920-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png'];
+
+  const defaultCursorUrl = "data:image/svg+xml,%3csvg id='Layer_1' fill='black' xmlns='http://www.w3.org/2000/svg' version='1.1' viewBox='0 0 32 32'%3e%3cpath d='M31.87,28.2c-.2-.57-1.35-1.91-2.01-1.83l-9.73-8.72c-.24.48-.43-.13-.64-.19-.2-.05-.32.21-.51.13l-1.57-1.42c.35-.07.52-.43.7-.72.43-.69.89-1.73,1.05-2.53.02-.08.11-.24-.02-.27l-.73,1.99c-.11-.26.22-.69.31-.99.19-.63.18-1.44.48-1.96l.07-1.35c.11-.21.11-.08.12.06.01.47-.08.91-.1,1.36,0,.08-.02.28.11.22.44-2.76-.39-5.71-2.21-7.88l-.49-.46c.39.51.72,1.05,1.01,1.61-1.11-1.69-2.78-2.93-4.69-3.59-.02,0-.04-.02-.05-.02C9.85.14,5.95.59,3.27,2.9,1.17,4.72.05,7.22.04,9.77c-.11,1.12,0,2.27.35,3.4,1.49,4.83,6.83,7.49,11.91,5.92,1.29-.4,2.44-1.03,3.42-1.83-1.2,1.06-2.66,1.76-4.42,2.1-2.76.53-5.44.14-7.77-1.48-.06,0-.03.09,0,.12.15.19.97.69,1.22.84,3.55,2.08,8.12,1.69,11.29-.94l.21.1,1.42,1.32.83-1.01-.86.77-1.54-1.5.84-1.02c.09-.09.17-.09.29-.05.09.03,1.34,1.17,1.4,1.26.08.12.06.19.05.32l.41-.29c.24.34.46.63.87.36l9.48,8.69-.22.36c.35-.28.63-.01.45.37l.41-.29s-.1.16-.05.27c.26.56,2.01.95,1.46,1.99-.33.64-1.13.51-1.71.7l-.08.36c-.48.31-1.54-.55-1.81-.97l1.06-1.33c-.38.08-1.06,1.36-1.37,1.25l-.14-.28,1.64-1.93-.28.16-9.36-8.8-1.41,1.28c-.2.09-.54-.53-.57-.5v.48l9.67,9.39c.06.64,1.19,1.58,1.77,1.77,1.8.59,3.59-1.15,2.97-2.92h0ZM1.23,12.9C-.11,8.54,2.55,3.84,7.17,2.42c4.62-1.42,9.46.97,10.81,5.34,1.35,4.37-1.32,9.07-5.94,10.49s-9.46-.97-10.81-5.34h0Z'/%3e%3c/svg%3e";
+  
+  const itemImageUrls = [
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0909-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0910-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0911-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0912-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0913-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0914-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0915-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0916-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0917-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0918-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0919-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0920-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', // 12번째
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0923-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0924-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0925-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0926-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0927-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0928-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0929-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0920-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', // 👇 20번째 사진 복구
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%80%E1%85%A2%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/0921-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/0922-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A83.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%89%E1%85%A9%E1%86%AB%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%89%E1%85%B5%E1%86%AB%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%89%E1%85%B5%E1%86%AB%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A82.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%8C%E1%85%A1%E1%84%8C%E1%85%A5%E1%86%AB%E1%84%80%E1%85%A5-%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png'
+  ];
+  
+  const hotbarItemStyles = [
+    { r: 80, sx: 1, sy: 1, tx: 30, ty: -25 }, { r: 90, sx:  1, sy: 1, tx: -30, ty: -25 }, { r: 90, sx: 1, sy: 1, tx: 30, ty: -25 },
+    { r: 90, sx:  -1, sy: 1, tx: 30, ty: -25 }, { r: 90, sx: 1, sy: 1, tx: 30, ty: -25 }, { r: 90, sx:  -1, sy: 1, tx: 30, ty: -25 },
+    { r: 90, sx: 1, sy: 1, tx: 30, ty: -25 }, { r: 90, sx:  -1, sy: 1, tx: 30, ty: -25 }, { r: 90, sx: -1, sy: 1, tx: -30, ty: -25 },
+    { r: 90, sx:  -1, sy: 1, tx: 30, ty: -25 }, { r: 100, sx: -1, sy: 1, tx: -30, ty: -25 }, { r: 90, sx:  -1, sy: 1, tx: 30, ty: -25 },
+    { r: 85, sx: 1, sy: 1, tx: 30, ty: -25 }, { r: 90, sx:  -1, sy: 1, tx: 30, ty: -25 }, { r: 90, sx: 1, sy: 1, tx: 30, ty: -25 },
+    { r: 90, sx:  -1, sy: 1, tx: 30, ty: -25 }, { r: 90, sx: 1, sy: 1, tx: 30, ty: -25 }, { r: 90, sx:  -1, sy: 1, tx: 30, ty: -25 },
+    { r: 90, sx: 1, sy: 1, tx: 30, ty: -25 },
+    { r: 90, sx: -1, sy: 1, tx: 30, ty: -25 }, { r: 135, sx: -1, sy: 1, tx: 0, ty: -45 }, { r: 90, sx: -1, sy: 1, tx: 30, ty: -25 },
+    { r: 90, sx: -1, sy: 1, tx: -30, ty: -25 }, { r: 90, sx: -1, sy: 1, tx: 30, ty: -25 }, { r: 90, sx: 1, sy: 1, tx: 20, ty: -35 },
+    { r: 130, sx: 1, sy: 1, tx: -50, ty: -25 }, { r: 70, sx: 1, sy: 1, tx: 50, ty: -25 }, { r: 65, sx: 1, sy: 1, tx: -30, ty: -25 }
+  ];
+
+  const itemNames = [
+    'Soil', 'Concrete', 'Asphalt', 'Soil', 'Wood', 'Wood', 'Wood', 'Asphalt', 'Asphalt', 
+    'Wood', 'Asphalt', 'Concrete', 'Wood', 'Asphalt', 'Wood', 'Concrete', 'Wood', 
+    'Wood', 'Wood', 'Soil', 'Soil', 'Soil', 'Asphalt', 'Soil', 'Asphalt', 'Soil', 'Soil', 'Concrete'
+  ];
 
   const trailCount = 5;
   const trailImages = [];
-  const positionHistory = []; 
+  const positionHistory = [];
   let currentAngle = 0, isFlippedX = false, currentSize = 35;
   const minSize = 15, maxSize = 80;
-  let placedItemZIndex = 2;
-
-  let faceLandmarker;
-  let handLandmarker;
-  let wasFistLastFrame = false;
-  let canClick = true;
-  
+  let placedItemZIndex = 10003;
+  let faceLandmarker, handLandmarker;
+  let wasFistLastFrame = false, canClick = true;
   let frameCounter = 0;
   const detectionInterval = 2;
-  let lastFaceResults = null;
-  let lastHandResults = null;
+  let lastFaceResults = null, lastHandResults = null;
+  let controlHandIndex = -1, controlState = "none";
+  let isAdjustingSize = false;
+  let lastSizeAdjustDistance = null;
+  const sizeAdjustmentSensitivity = 300;
+  let isSwiping = false, swipeStartX = 0;
+  const swipeThreshold = 0.04;
+  let currentSelectedItem = null;
 
-  let controlHandIndex = -1;
-  
-  // --- ⚡️ 점진적 크기 조절을 위한 변수 ⚡️ ---
-  let isAdjustingSize = false; // 현재 크기 조절 제스처가 진행 중인지 여부
-  let initialSizeAdjustDistance = 0; // 제스처 시작 시 손가락 사이의 초기 거리
-  let sizeAtGestureStart = 0; // 제스처 시작 시 커서의 크기
-  const sizeAdjustmentSensitivity = 300; // 손가락 거리 변화에 따른 크기 변화 민감도
-  // --- ⚡️ /변수 ⚡️ ---
-
-  itemImageUrls.forEach(url => {
+  itemImageUrls.forEach((url, index) => {
     const itemImg = document.createElement('img');
-    itemImg.src = url;  
+    itemImg.src = url;
     itemImg.className = 'hotbar-item';
     itemBar.appendChild(itemImg);
+
+    if (hotbarItemStyles[index]) {
+      const style = hotbarItemStyles[index];
+      const baseTransform = `rotate(${style.r}deg) scaleX(${style.sx}) scaleY(${style.sy}) translateY(${style.ty}px) translateX(${style.tx}px)`;
+      itemImg.style.setProperty('--base-transform', baseTransform);
+    }
+  });
+  
+  itemScrollWrapper.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    itemScrollWrapper.scrollLeft += e.deltaY + e.deltaX;
   });
   
   function applyCursorTransform() {
@@ -174,17 +356,55 @@
   }
 
   function selectItem(itemElement) {
+    const allItems = document.querySelectorAll('.hotbar-item');
     document.querySelector('.hotbar-item.selected')?.classList.remove('selected');
+    
     if (itemElement) {
+      currentSelectedItem = itemElement;
       itemElement.classList.add('selected');
       setCursor(itemElement.src);
+      itemElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      
+      const index = Array.from(allItems).indexOf(itemElement);
+      if (index !== -1 && itemNames[index]) {
+          itemLabelNumber.textContent = index + 1;
+          itemLabelName.textContent = itemNames[index];
+          itemLabel.classList.add('visible');
+      } else {
+          itemLabel.classList.remove('visible');
+      }
+
     } else {
+      currentSelectedItem = null;
       setCursor(defaultCursorUrl);
+      itemLabel.classList.remove('visible');
     }
   }
 
+  function selectNextItem() {
+    const items = document.querySelectorAll('.hotbar-item');
+    if (items.length === 0) return;
+    const currentSelected = document.querySelector('.hotbar-item.selected');
+    let nextIndex = 0;
+    if (currentSelected) {
+      nextIndex = (Array.from(items).indexOf(currentSelected) + 1) % items.length;
+    }
+    selectItem(items[nextIndex]);
+  }
+
+  function selectPreviousItem() {
+    const items = document.querySelectorAll('.hotbar-item');
+    if (items.length === 0) return;
+    const currentSelected = document.querySelector('.hotbar-item.selected');
+    let prevIndex = items.length - 1;
+    if (currentSelected) {
+      prevIndex = (Array.from(items).indexOf(currentSelected) - 1 + items.length) % items.length;
+    }
+    selectItem(items[prevIndex]);
+  }
+
   function placeItemAt(x, y) {
-    if (cursorImage.src === defaultCursorUrl) { return; }
+    if (cursorImage.src === defaultCursorUrl) return;
     const placedItem = document.createElement('img');
     placedItem.src = cursorImage.src;
     placedItem.className = 'placed-item';
@@ -195,12 +415,12 @@
     placedItem.style.transform = cursorImage.style.transform;
     placedItem.style.zIndex = placedItemZIndex++;
     document.body.appendChild(placedItem);
-    setTimeout(() => { placedItem.classList.add('fading-out'); }, 10);
-    placedItem.addEventListener('animationend', () => { placedItem.remove(); });
+    setTimeout(() => placedItem.classList.add('fading-out'), 10);
+    placedItem.addEventListener('animationend', () => placedItem.remove());
     isFlippedX = !isFlippedX;
     applyCursorTransform();
   }
-  
+
   function drawTrail() {
     const rect = cursorImage.getBoundingClientRect();
     positionHistory.push({
@@ -208,15 +428,9 @@
       y: rect.top + rect.height / 2 + window.scrollY,
       transform: cursorImage.style.transform
     });
-
-    if (positionHistory.length > trailCount * 2) { 
-      positionHistory.shift();
-    }
-
+    if (positionHistory.length > trailCount * 2) positionHistory.shift();
     trailImages.forEach((trail, index) => {
-      const historyIndex = Math.max(0, positionHistory.length - 1 - (index * 2));
-      const pos = positionHistory[historyIndex];
-
+      const pos = positionHistory[Math.max(0, positionHistory.length - 1 - (index * 2))];
       if (pos) {
         trail.style.left = `${pos.x}px`;
         trail.style.top = `${pos.y}px`;
@@ -225,58 +439,61 @@
       }
     });
   }
+  
+  // 👇 수정된 부분: 28번 아이템(인덱스 27)의 라벨 위치를 조건부로 변경
+  function updateLabelPosition() {
+    if (currentSelectedItem) {
+        const allItems = document.querySelectorAll('.hotbar-item');
+        const index = Array.from(allItems).indexOf(currentSelectedItem);
+        const rect = currentSelectedItem.getBoundingClientRect();
 
+        // 28번 아이템은 인덱스 27에 해당
+        if (index === 27) { 
+            itemLabel.style.left = `${rect.right + -100}px`;
+            itemLabel.style.top = `${rect.bottom + -40}px`; // 아이템 아래 5px 위치에 표시
+            itemLabel.style.transform = 'translateY(0)'; // 수직 중앙 정렬 transform 제거
+
+            
+        } else {
+            itemLabel.style.left = `${rect.right + 1}px`; // 기본 위치: 아이템 오른쪽
+            itemLabel.style.top = `${rect.top + rect.height / 2}px`; // 기본 위치: 아이템 세로 중앙
+            itemLabel.style.transform = 'translateY(-50%)'; // 기본 수직 중앙 정렬 transform
+        }
+    }
+  }
 
   window.addEventListener('click', (e) => {
-    if (e.target.closest('#bottom-ui-container')) { return; }
+    if (e.target.closest('#bottom-ui-container')) return;
     placeItemAt(e.pageX, e.pageY);
   });
-
-  document.querySelectorAll('.hotbar-item').forEach(item => {
-      item.addEventListener('click', () => selectItem(item));
+  
+  itemBar.addEventListener('click', (e) => {
+    if (e.target.classList.contains('hotbar-item')) selectItem(e.target);
   });
 
   window.addEventListener('mousemove', (e) => {
-    if (controlHandIndex === -1) {
+    if (controlState === 'none') {
         cursorImage.style.left = `${e.pageX}px`;
         cursorImage.style.top = `${e.pageY}px`;
     }
   });
 
-  let currentPage = 0; const itemsPerPage = 7;
-  const totalPages = Math.ceil(itemImageUrls.length / itemsPerPage);
-  const itemHeight = 46;
-  document.getElementById('down-arrow').addEventListener('click', () => {
-    if (currentPage < totalPages - 1) { currentPage++; itemBar.style.transform = `translateY(-${currentPage * itemsPerPage * itemHeight}px)`; }
-  });
-  document.getElementById('up-arrow').addEventListener('click', () => {
-    if (currentPage > 0) { currentPage--; itemBar.style.transform = `translateY(-${currentPage * itemsPerPage * itemHeight}px)`; }
-  });
-
   async function setupMediaPipe() {
     const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
     faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
-        delegate: "GPU",
-      },
-      runningMode: "VIDEO",
-      numFaces: 1,
+      baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`, delegate: "GPU" },
+      runningMode: "VIDEO", numFaces: 1,
     });
     handLandmarker = await HandLandmarker.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
-        delegate: "GPU",
-      },
-      runningMode: "VIDEO",
-      numHands: 2,
+      baseOptions: { modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`, delegate: "GPU" },
+      runningMode: "VIDEO", numHands: 2,
     });
     loadingMessage.style.display = 'none';
     enableCam();
   }
 
   function enableCam() {
-    if (!faceLandmarker || !handLandmarker) { return; }
+    if (!faceLandmarker || !handLandmarker) return;
     navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
       video.srcObject = stream;
       video.addEventListener("loadeddata", () => {
@@ -292,38 +509,29 @@
   }
 
   function getDistance(p1, p2) {
-      const dx = p1.x - p2.x;
-      const dy = p1.y - p2.y;
-      return Math.sqrt(dx * dx + dy * dy);
+      if (!p1 || !p2) return 0;
+      return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
   }
 
   function detectHandGesture(landmarks) {
       try {
-          const thumbTip = landmarks[4];
-          const thumbIp = landmarks[3];
-          const indexTip = landmarks[8];
-          const indexPip = landmarks[6];
-          const middleTip = landmarks[12];
-          const middlePip = landmarks[10];
-          const ringTip = landmarks[16];
-          const ringPip = landmarks[14];
-          const pinkyTip = landmarks[20];
-          const pinkyPip = landmarks[18];
-
-          const isThumbExtended = thumbTip.y < thumbIp.y;
+          const thumbTip = landmarks[4], thumbPip = landmarks[2];
+          const indexTip = landmarks[8], indexPip = landmarks[6];
+          const middleTip = landmarks[12], middlePip = landmarks[10];
+          const ringTip = landmarks[16], ringPip = landmarks[14];
+          const pinkyTip = landmarks[20], pinkyPip = landmarks[18];
+          const isThumbExtended = thumbTip.y < thumbPip.y;
           const isIndexExtended = indexTip.y < indexPip.y;
           const isMiddleExtended = middleTip.y < middlePip.y;
-          const isMiddleFolded = !isMiddleExtended;
           const isRingFolded = ringTip.y > ringPip.y;
           const isPinkyFolded = pinkyTip.y > pinkyPip.y;
+          const palmWidth = getDistance(landmarks[5], landmarks[17]);
+          const isThumbOut = getDistance(thumbTip, indexPip) > palmWidth * 0.7;
 
-          if (isThumbExtended && isIndexExtended && isMiddleFolded && isRingFolded && isPinkyFolded) {
-              return "Size Adjust";
-          } else if (isIndexExtended && isMiddleExtended && isRingFolded && isPinkyFolded) {
-              return "Pointing";
-          } else if (!isIndexExtended && !isMiddleExtended && isRingFolded && isPinkyFolded) {
-              return "Click";
-          }
+          if (isThumbExtended && !isIndexExtended && !isMiddleExtended && isRingFolded && isPinkyFolded && isThumbOut) return "ThumbsUp";
+          if (isThumbExtended && isIndexExtended && !isMiddleExtended && isRingFolded && isPinkyFolded) return "Size Adjust";
+          if (isIndexExtended && isMiddleExtended && isRingFolded && isPinkyFolded) return "Pointing";
+          if (!isIndexExtended && !isMiddleExtended && isRingFolded && isPinkyFolded) return "Click";
           return "None";
       } catch (e) {
           return "None";
@@ -336,140 +544,133 @@
       requestAnimationFrame(predictWebcam);
       return;
     }
-    
     canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-    
     if (frameCounter % detectionInterval === 0) {
       lastFaceResults = faceLandmarker.detectForVideo(video, startTimeMs);
       lastHandResults = handLandmarker.detectForVideo(video, startTimeMs);
     }
     frameCounter++;
 
-    if (lastFaceResults && lastFaceResults.faceLandmarks && lastFaceResults.faceLandmarks.length > 0) {
+    if (lastFaceResults?.faceLandmarks?.length > 0) {
       const landmarks = lastFaceResults.faceLandmarks[0];
-      const p1 = landmarks[1];
-      const p2 = landmarks[6];
-      const dx = p1.x - p2.x;
-      const dy = p1.y - p2.y;
-      let angle = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
-      const sensitivity = 4;
-      currentAngle = angle * sensitivity;
+      const p1 = landmarks[1], p2 = landmarks[6];
+      currentAngle = (Math.atan2(p1.y - p2.y, p1.x - p2.x) * (180 / Math.PI) - 90) * 4;
       applyCursorTransform();
 
       let minX = 1, maxX = 0, minY = 1, maxY = 0;
       for (const point of landmarks) {
-          if (point.x < minX) minX = point.x;
-          if (point.x > maxX) maxX = point.x;
-          if (point.y < minY) minY = point.y;
-          if (point.y > maxY) maxY = point.y;
+          minX = Math.min(minX, point.x); maxX = Math.max(maxX, point.x);
+          minY = Math.min(minY, point.y); maxY = Math.max(maxY, point.y);
       }
       canvasCtx.strokeStyle = "red";
       canvasCtx.lineWidth = 4;
       canvasCtx.strokeRect(minX * canvas.width, minY * canvas.height, (maxX - minX) * canvas.width, (maxY - minY) * canvas.height);
     }
-    
+
     const detectedHands = lastHandResults?.landmarks || [];
     const gestures = detectedHands.map(detectHandGesture);
     let isFist = false;
+    
+    const resetControl = () => {
+        controlState = "none";
+        controlHandIndex = -1;
+        isAdjustingSize = false;
+        isSwiping = false;
+        lastSizeAdjustDistance = null;
+    };
 
-    if (controlHandIndex === -1) {
+    if (controlState === "none") {
         const pointingHandIdx = gestures.findIndex(g => g === "Pointing");
         if (pointingHandIdx !== -1) {
             controlHandIndex = pointingHandIdx;
+            controlState = "pointing";
         }
-    }
-
-    if (controlHandIndex !== -1) {
+    } else {
         if (controlHandIndex >= detectedHands.length) {
-            controlHandIndex = -1;
-            wasFistLastFrame = false;
+            resetControl();
         } else {
-            const controlGesture = gestures[controlHandIndex];
+            const currentGesture = gestures[controlHandIndex];
             const controlLandmarks = detectedHands[controlHandIndex];
 
-            // --- ⚡️ 수정된 부분: 점진적 크기 조절 로직 ⚡️ ---
-            if (controlGesture === "Size Adjust") {
-                const thumbTip = controlLandmarks[4];
-                const indexTip = controlLandmarks[8];
-                const currentDistance = getDistance(thumbTip, indexTip);
+            if (currentGesture === "ThumbsUp") {
+                controlState = "swiping";
+                const currentX = controlLandmarks[4].x;
+                if (!isSwiping) {
+                    isSwiping = true;
+                    swipeStartX = currentX;
+                } else {
+                    const deltaX = currentX - swipeStartX;
+                    if (deltaX < -swipeThreshold) {
+                        selectNextItem(); isSwiping = false;
+                    } else if (deltaX > swipeThreshold) {
+                        selectPreviousItem(); isSwiping = false;
+                    }
+                }
+            } else if (currentGesture === "Size Adjust") {
+                controlState = "sizing";
+                isAdjustingSize = true;
+                const currentDistance = getDistance(controlLandmarks[4], controlLandmarks[8]);
                 
-                // 제스처가 시작되는 첫 프레임
-                if (!isAdjustingSize) {
-                    isAdjustingSize = true;
-                    initialSizeAdjustDistance = currentDistance;
-                    sizeAtGestureStart = currentSize;
+                if (lastSizeAdjustDistance !== null) {
+                    const distanceDelta = currentDistance - lastSizeAdjustDistance;
+                    let newSize = currentSize + (distanceDelta * sizeAdjustmentSensitivity);
+                    applySize(Math.max(minSize, Math.min(maxSize, newSize)));
                 }
                 
-                // 초기 거리와의 차이를 계산
-                const distanceDelta = currentDistance - initialSizeAdjustDistance;
-                
-                // 차이값에 민감도를 곱해 크기 변화량을 계산하고, 이전 크기에 더해줌
-                let newSize = sizeAtGestureStart + (distanceDelta * sizeAdjustmentSensitivity);
-                
-                // 크기가 최소/최대값을 벗어나지 않도록 제한
-                newSize = Math.max(minSize, Math.min(maxSize, newSize));
-                
-                applySize(newSize);
-
-            } else if (controlGesture === "Pointing") {
-                isAdjustingSize = false; // Pointing 제스처로 바뀌면 크기 조절 상태 초기화
+                lastSizeAdjustDistance = currentDistance;
+            } else if (currentGesture === "Pointing") {
+                controlState = "pointing";
+                isAdjustingSize = false;
+                lastSizeAdjustDistance = null;
                 const targetX = (1 - (controlLandmarks[8].x + controlLandmarks[12].x) / 2) * window.innerWidth;
                 const targetY = ((controlLandmarks[8].y + controlLandmarks[12].y) / 2) * window.innerHeight;
                 cursorImage.style.left = `${targetX}px`;
                 cursorImage.style.top = `${targetY}px`;
             } else {
-                controlHandIndex = -1; // 다른 제스처이거나 손을 놓쳤을 경우 제어권 해제
+                resetControl();
             }
-            // --- ⚡️ /수정된 부분 ⚡️ ---
-
             const actionHandIndex = 1 - controlHandIndex;
             if (actionHandIndex < detectedHands.length && gestures[actionHandIndex] === "Click") {
                 isFist = true;
             }
         }
-    } else {
-        isAdjustingSize = false; // 제어하는 손이 없으면 크기 조절 상태 초기화
     }
-    
+
     if (isFist && !wasFistLastFrame && canClick) {
         const cursorRect = cursorImage.getBoundingClientRect();
-        const centerX = cursorRect.left + (cursorRect.width / 2) + window.scrollX;
-        const centerY = cursorRect.top + (cursorRect.height / 2) + window.scrollY;
-        placeItemAt(centerX, centerY);
-        
+        placeItemAt(cursorRect.left + cursorRect.width / 2, cursorRect.top + cursorRect.height / 2);
         canClick = false;
-        setTimeout(() => { canClick = true; }, 1000);  
+        setTimeout(() => { canClick = true; }, 1000);
     }
     wasFistLastFrame = isFist;
-
+    if (detectedHands.length === 0) resetControl();
+    
     detectedHands.forEach((landmarks, i) => {
         let minX = 1, maxX = 0, minY = 1, maxY = 0;
         landmarks.forEach(point => {
-            if (point.x < minX) minX = point.x;
-            if (point.x > maxX) maxX = point.x;
-            if (point.y < minY) minY = point.y;
-            if (point.y > maxY) maxY = point.y;
+            minX = Math.min(minX, point.x); maxX = Math.max(maxX, point.x);
+            minY = Math.min(minY, point.y); maxY = Math.max(maxY, point.y);
         });
-        const boxX = minX * canvas.width;
-        const boxY = minY * canvas.height;
-        const boxWidth = (maxX - minX) * canvas.width;
-        const boxHeight = (maxY - minY) * canvas.height;
+        const boxX = minX * canvas.width, boxY = minY * canvas.height;
+        const boxWidth = (maxX - minX) * canvas.width, boxHeight = (maxY - minY) * canvas.height;
 
-        let roleText = gestures[i];
-        let color = "blue";
+        let roleText = gestures[i], color = "blue";
         if (i === controlHandIndex) {
-            roleText = "Control: " + roleText;
-            if (isAdjustingSize) roleText += " (Sizing)";
+            roleText = "Control: " + gestures[i];
+            if (isAdjustingSize) roleText = "Control: Sizing";
+            if (isSwiping) roleText = "Control: Swiping";
             color = "green";
         } else if (controlHandIndex !== -1) {
-            roleText = "Action: " + (gestures[i] === "Click" ? "Click!" : "Locked");
+            let actionText = "Action: " + gestures[i];
+            if(gestures[i] === 'Click') actionText = "Action: Click!";
+            roleText = actionText;
             color = "orange";
         }
 
         canvasCtx.strokeStyle = color;
         canvasCtx.lineWidth = 4;
         canvasCtx.strokeRect(boxX, boxY, boxWidth, boxHeight);
-        
+
         const textBoxHeight = 30;
         canvasCtx.fillStyle = color;
         canvasCtx.fillRect(boxX, boxY + boxHeight, boxWidth, textBoxHeight);
@@ -482,13 +683,8 @@
         canvasCtx.restore();
     });
 
-    if (detectedHands.length === 0) {
-        controlHandIndex = -1;
-        wasFistLastFrame = false;
-        isAdjustingSize = false;
-    }
-    
     drawTrail();
+    updateLabelPosition(); // 👇 수정된 부분: 매 프레임마다 라벨 위치를 업데이트
     requestAnimationFrame(predictWebcam);
   }
 
