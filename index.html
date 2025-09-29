@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>최종 마우스 효과 (v10.4 - 완전 복원)</title>
+<title>흔적 남기기 프로젝트</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding&display=swap" rel="stylesheet">
@@ -28,21 +28,33 @@
   
   #cursor-image {
     z-index: 10002;
-    transition: transform 0.05s linear, top 0s linear, left 0s linear;
+    transition: transform 0.05s linear, top 0s linear, left 0s linear, filter 0.4s ease-in-out;
   }
 
   .trail-image {
     z-index: 10001;
     opacity: 0;
-    transition: opacity 0.2s ease-out;
+    transition: opacity 0.2s ease-out, filter 0.4s ease-in-out;
     filter: brightness(0);
   }
-  .placed-item { opacity: 1; }
+
+  /* [수정됨] placed-item에 filter 전환 효과 추가 */
+  .placed-item { 
+    opacity: 1; 
+    transition: filter 0.4s ease-in-out;
+  }
   .placed-item.fading-out { animation: fadeOut 30s linear forwards; }
   @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+  
+  /* .placed-item.placed-white 규칙은 이제 필요 없으므로 삭제되었습니다. */
+
 
   /* --- 🎨 핫바(Hotbar) CSS --- */
   
+  #hotbar-border, #bottom-ui-container {
+    transition: all 0.4s ease-in-out;
+  }
+
   #hotbar-border {
     position: fixed;
     bottom: 10px;
@@ -73,6 +85,16 @@
     box-sizing: border-box;
   }
 
+  body.webcam-is-fullscreen #hotbar-border {
+    width: calc(100% - 20px);
+    background-color: transparent;
+    border-color: white;
+  }
+  body.webcam-is-fullscreen #bottom-ui-container {
+    width: calc(100% - 20px);
+  }
+
+
   #hotbar-container {
     width: 100%;
     height: 100%;
@@ -96,7 +118,7 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    padding: 50px 0; /* 👇 수정된 부분: 세로 움직임 방지 */
+    padding: 50px 0;
     height: 100%;
     box-sizing: border-box;
   }
@@ -106,7 +128,7 @@
     margin: 0 2px;
     object-fit: contain;
     image-rendering: pixelated;
-    transition: transform 0.2s ease-in-out;
+    transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out, filter 0.4s ease-in-out;
     flex-shrink: 0;
     transform-origin: center center;
     transform: var(--base-transform, 'none');
@@ -118,6 +140,15 @@
     transform: var(--base-transform, 'none') scale(1.35);
   }
 
+  /* [수정됨] placed-item 규칙을 여기에 포함시켜 모든 아이템의 색상을 한 번에 제어 */
+  body.webcam-is-fullscreen #cursor-image,
+  body.webcam-is-fullscreen .trail-image,
+  body.webcam-is-fullscreen .hotbar-item,
+  body.webcam-is-fullscreen .placed-item {
+    filter: brightness(0) invert(1);
+  }
+
+
   #loading-message {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
     font-family: sans-serif; font-size: 1.2em; padding: 20px;
@@ -125,10 +156,29 @@
     border-radius: 10px; z-index: 10002;
   }
   
+  /* --- 📹 웹캠 관련 스타일 --- */
+  #video-container, #video-border {
+    transition: all 0.4s ease-in-out;
+  }
+  
+  #video-container.fullscreen-webcam,
+  #video-border.fullscreen-webcam {
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    z-index: 9990; 
+  }
+  
+  #video-container.fullscreen-webcam video {
+    object-fit: cover;
+  }
+  
   #video-container {
     position: fixed;
-    bottom: 10px;
-    right: 10px;
+    top: calc(100vh - 180px - 10px);
+    left: calc(100vw - 240px - 10px);
     width: 240px;
     height: 180px;
     border-radius: 8px;
@@ -139,8 +189,8 @@
   
   #video-border {
     position: fixed;
-    bottom: 10px;
-    right: 10px;
+    top: calc(100vh - 180px - 10px);
+    left: calc(100vw - 240px - 10px);
     width: 240px;
     height: 180px;
     border-radius: 8px;
@@ -148,6 +198,10 @@
     z-index: 10001;
     pointer-events: none;
     box-sizing: border-box;
+  }
+  
+  body.webcam-is-fullscreen #video-border {
+    border-color: white;
   }
   
   #webcam, #overlay-canvas {
@@ -162,23 +216,20 @@
   .roughen-effect {
     filter: url(#roughen);
   }
-
-  /* 👇 수정된 부분: 아이템 라벨 스타일 변경 */
+  
   #item-label {
-    position: absolute; /* fixed에서 absolute로 변경하여 아이템을 따라다니게 함 */
+    position: absolute;
     display: flex;
     align-items: center;
     font-family: 'Nanum Gothic Coding', monospace;
-    font-size: 14px; /* 크기 축소 */
+    font-size: 14px;
     font-weight: bold;
     color: black;
     z-index: 10000;
     pointer-events: none;
-    
-    /* 부드럽게 나타나고 사라지는 효과 및 위치 이동 효과 */
     opacity: 0;
-    transform: translateY(-50%); /* Y축 중앙 정렬 */
-    transition: opacity 0.3s ease, top 0.1s linear, left 0.1s linear, transform 0.1s linear;
+    transform: translateY(-50%);
+    transition: opacity 0.3s ease, top 0.1s linear, left 0.1s linear, transform 0.1s linear, color 0.4s ease-in-out;
     visibility: hidden;
   }
   #item-label.visible {
@@ -189,13 +240,22 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px; /* 크기 축소 */
-    height: 16px; /* 크기 축소 */
+    width: 16px;
+    height: 16px;
     background-color: black;
     color: white;
-    border-radius: 4px; /* 원에서 둥근 사각형으로 변경 */
+    border-radius: 4px;
     margin-right: 8px;
-    font-size: 10px; /* 크기 축소 */
+    font-size: 10px;
+    transition: color 0.4s ease-in-out, background-color 0.4s ease-in-out;
+  }
+
+  body.webcam-is-fullscreen #item-label {
+    color: white;
+  }
+  body.webcam-is-fullscreen #item-label-number {
+    background-color: white;
+    color: black;
   }
 </style>
 </head>
@@ -244,6 +304,18 @@
   const itemLabelNumber = document.getElementById('item-label-number');
   const itemLabelName = document.getElementById('item-label-name');
 
+  const videoContainer = document.getElementById('video-container');
+  const videoBorder = document.getElementById('video-border');
+
+  videoContainer.addEventListener('dblclick', () => {
+    document.body.classList.toggle('webcam-is-fullscreen');
+    videoContainer.classList.toggle('fullscreen-webcam');
+    videoBorder.classList.toggle('fullscreen-webcam');
+    
+    if (currentSelectedItem) {
+      selectItem(currentSelectedItem);
+    }
+  });
 
   const defaultCursorUrl = "data:image/svg+xml,%3csvg id='Layer_1' fill='black' xmlns='http://www.w3.org/2000/svg' version='1.1' viewBox='0 0 32 32'%3e%3cpath d='M31.87,28.2c-.2-.57-1.35-1.91-2.01-1.83l-9.73-8.72c-.24.48-.43-.13-.64-.19-.2-.05-.32.21-.51.13l-1.57-1.42c.35-.07.52-.43.7-.72.43-.69.89-1.73,1.05-2.53.02-.08.11-.24-.02-.27l-.73,1.99c-.11-.26.22-.69.31-.99.19-.63.18-1.44.48-1.96l.07-1.35c.11-.21.11-.08.12.06.01.47-.08.91-.1,1.36,0,.08-.02.28.11.22.44-2.76-.39-5.71-2.21-7.88l-.49-.46c.39.51.72,1.05,1.01,1.61-1.11-1.69-2.78-2.93-4.69-3.59-.02,0-.04-.02-.05-.02C9.85.14,5.95.59,3.27,2.9,1.17,4.72.05,7.22.04,9.77c-.11,1.12,0,2.27.35,3.4,1.49,4.83,6.83,7.49,11.91,5.92,1.29-.4,2.44-1.03,3.42-1.83-1.2,1.06-2.66,1.76-4.42,2.1-2.76.53-5.44.14-7.77-1.48-.06,0-.03.09,0,.12.15.19.97.69,1.22.84,3.55,2.08,8.12,1.69,11.29-.94l.21.1,1.42,1.32.83-1.01-.86.77-1.54-1.5.84-1.02c.09-.09.17-.09.29-.05.09.03,1.34,1.17,1.4,1.26.08.12.06.19.05.32l.41-.29c.24.34.46.63.87.36l9.48,8.69-.22.36c.35-.28.63-.01.45.37l.41-.29s-.1.16-.05.27c.26.56,2.01.95,1.46,1.99-.33.64-1.13.51-1.71.7l-.08.36c-.48.31-1.54-.55-1.81-.97l1.06-1.33c-.38.08-1.06,1.36-1.37,1.25l-.14-.28,1.64-1.93-.28.16-9.36-8.8-1.41,1.28c-.2.09-.54-.53-.57-.5v.48l9.67,9.39c.06.64,1.19,1.58,1.77,1.77,1.8.59,3.59-1.15,2.97-2.92h0ZM1.23,12.9C-.11,8.54,2.55,3.84,7.17,2.42c4.62-1.42,9.46.97,10.81,5.34,1.35,4.37-1.32,9.07-5.94,10.49s-9.46-.97-10.81-5.34h0Z'/%3e%3c/svg%3e";
   
@@ -259,7 +331,7 @@
     'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0917-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0918-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0919-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
-    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0920-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', // 12번째
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0920-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0923-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0924-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0925-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
@@ -267,7 +339,7 @@
     'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0927-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0928-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0929-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
-    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0920-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png', // 👇 20번째 사진 복구
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/main/0920-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%80%E1%85%A2%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/0921-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/0922-%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
@@ -360,6 +432,13 @@
     document.querySelector('.hotbar-item.selected')?.classList.remove('selected');
     
     if (itemElement) {
+      const isFullscreen = document.body.classList.contains('webcam-is-fullscreen');
+      const unselectedOpacity = isFullscreen ? '0.5' : '0.2';
+
+      allItems.forEach(item => {
+        item.style.opacity = (item === itemElement) ? '1' : unselectedOpacity;
+      });
+
       currentSelectedItem = itemElement;
       itemElement.classList.add('selected');
       setCursor(itemElement.src);
@@ -375,11 +454,16 @@
       }
 
     } else {
+      allItems.forEach(item => {
+        item.style.opacity = '1';
+      });
+
       currentSelectedItem = null;
       setCursor(defaultCursorUrl);
       itemLabel.classList.remove('visible');
     }
   }
+
 
   function selectNextItem() {
     const items = document.querySelectorAll('.hotbar-item');
@@ -408,6 +492,12 @@
     const placedItem = document.createElement('img');
     placedItem.src = cursorImage.src;
     placedItem.className = 'placed-item';
+    
+    // [수정됨] 색상을 동적으로 제어하므로 더 이상 별도 클래스를 추가할 필요가 없습니다.
+    // if (document.body.classList.contains('webcam-is-fullscreen')) {
+    //     placedItem.classList.add('placed-white');
+    // }
+
     placedItem.style.left = `${x}px`;
     placedItem.style.top = `${y}px`;
     placedItem.style.width = `${currentSize}px`;
@@ -440,24 +530,20 @@
     });
   }
   
-  // 👇 수정된 부분: 28번 아이템(인덱스 27)의 라벨 위치를 조건부로 변경
   function updateLabelPosition() {
     if (currentSelectedItem) {
         const allItems = document.querySelectorAll('.hotbar-item');
         const index = Array.from(allItems).indexOf(currentSelectedItem);
         const rect = currentSelectedItem.getBoundingClientRect();
 
-        // 28번 아이템은 인덱스 27에 해당
         if (index === 27) { 
             itemLabel.style.left = `${rect.right + -100}px`;
-            itemLabel.style.top = `${rect.bottom + -40}px`; // 아이템 아래 5px 위치에 표시
-            itemLabel.style.transform = 'translateY(0)'; // 수직 중앙 정렬 transform 제거
-
-            
+            itemLabel.style.top = `${rect.bottom + -40}px`;
+            itemLabel.style.transform = 'translateY(0)';
         } else {
-            itemLabel.style.left = `${rect.right + 1}px`; // 기본 위치: 아이템 오른쪽
-            itemLabel.style.top = `${rect.top + rect.height / 2}px`; // 기본 위치: 아이템 세로 중앙
-            itemLabel.style.transform = 'translateY(-50%)'; // 기본 수직 중앙 정렬 transform
+            itemLabel.style.left = `${rect.right + 1}px`;
+            itemLabel.style.top = `${rect.top + rect.height / 2}px`;
+            itemLabel.style.transform = 'translateY(-50%)';
         }
     }
   }
@@ -468,7 +554,13 @@
   });
   
   itemBar.addEventListener('click', (e) => {
-    if (e.target.classList.contains('hotbar-item')) selectItem(e.target);
+    if (e.target.classList.contains('hotbar-item')) {
+      if (e.target === currentSelectedItem) {
+        selectItem(null); 
+      } else {
+        selectItem(e.target);
+      }
+    }
   });
 
   window.addEventListener('mousemove', (e) => {
@@ -684,7 +776,7 @@
     });
 
     drawTrail();
-    updateLabelPosition(); // 👇 수정된 부분: 매 프레임마다 라벨 위치를 업데이트
+    updateLabelPosition();
     requestAnimationFrame(predictWebcam);
   }
 
