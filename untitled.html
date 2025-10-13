@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>v10.12 - 흔적 남기기</title>
+<title>자국 남기기</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding&display=swap" rel="stylesheet">
@@ -306,6 +306,10 @@
 
   const videoContainer = document.getElementById('video-container');
   const videoBorder = document.getElementById('video-border');
+  
+  // --- ▼ [수정] 사운드 파일 URL 교체 ▼ ---
+  const placeSound = new Audio('https://raw.githubusercontent.com/youngwookim11/image-storage/4383f70a6e7617ba2ec0730883a320b9129dc26c/%E1%84%8F%E1%85%AE%E1%86%BC1.mp3');
+  // --- ▲ [수정] 여기까지 ▲ ---
 
   videoContainer.addEventListener('dblclick', () => {
     document.body.classList.toggle('webcam-is-fullscreen');
@@ -347,7 +351,9 @@
     'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%89%E1%85%A9%E1%86%AB%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%89%E1%85%B5%E1%86%AB%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
     'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%89%E1%85%B5%E1%86%AB%E1%84%87%E1%85%A1%E1%86%AF%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A82.png',
-    'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%8C%E1%85%A1%E1%84%8C%E1%85%A5%E1%86%AB%E1%84%80%E1%85%A5-%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png'
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/89a2fee290f3b6f012cf6ec572343f998bf0f4fb/%E1%84%8C%E1%85%A1%E1%84%8C%E1%85%A5%E1%86%AB%E1%84%80%E1%85%A5-%E1%84%8C%E1%85%A1%E1%84%80%E1%85%AE%E1%86%A8.png',
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/9a6ea2ae054b616cdc82bd5b2d063d70968acabe/29.png', // 29번 아이템
+    'https://raw.githubusercontent.com/youngwookim11/image-storage/e6de60b9643a9f851fcb359d85ca845f6add783b/31.png'  // 30번 아이템
   ];
   
   const hotbarItemStyles = [
@@ -360,13 +366,17 @@
     { r: 90, sx: 1, sy: 1, tx: 30, ty: -25 },
     { r: 90, sx: -1, sy: 1, tx: 30, ty: -25 }, { r: 135, sx: -1, sy: 1, tx: 0, ty: -45 }, { r: 90, sx: -1, sy: 1, tx: 30, ty: -25 },
     { r: 90, sx: -1, sy: 1, tx: -30, ty: -25 }, { r: 90, sx: -1, sy: 1, tx: 30, ty: -25 }, { r: 90, sx: 1, sy: 1, tx: 20, ty: -35 },
-    { r: 130, sx: 1, sy: 1, tx: -50, ty: -25 }, { r: 70, sx: 1, sy: 1, tx: 50, ty: -25 }, { r: 65, sx: 1, sy: 1, tx: -30, ty: -25 }
+    { r: 130, sx: 1, sy: 1, tx: -50, ty: -25 }, { r: 70, sx: 1, sy: 1, tx: 50, ty: -25 }, { r: 90, sx: 1, sy: 1, tx: -30, ty: -35 },
+    { r: 90, sx: 1, sy: 1, tx: 30, ty: -25 }, // 29번 아이템
+    { r: 90, sx: -1, sy: 1, tx: 30, ty: -25 }  // 30번 아이템
   ];
 
   const itemNames = [
     'Soil', 'Concrete', 'Asphalt', 'Soil', 'Wood', 'Wood', 'Wood', 'Asphalt', 'Asphalt', 
     'Wood', 'Asphalt', 'Concrete', 'Wood', 'Asphalt', 'Wood', 'Concrete', 'Wood', 
-    'Wood', 'Wood', 'Soil', 'Soil', 'Soil', 'Asphalt', 'Soil', 'Asphalt', 'Soil', 'Soil', 'Concrete'
+    'Wood', 'Wood', 'Soil', 'Soil', 'Soil', 'Asphalt', 'Soil', 'Asphalt', 'Soil', 'Soil', 'Concrete',
+    'Wood',     // 29번 아이템
+    'Asphalt'   // 30번 아이템
   ];
 
   const trailCount = 5;
@@ -489,15 +499,15 @@
 
   function placeItemAt(x, y) {
     if (cursorImage.src === defaultCursorUrl) return;
+
+    // 사운드 재생
+    placeSound.currentTime = 0;
+    placeSound.play();
+
     const placedItem = document.createElement('img');
     placedItem.src = cursorImage.src;
     placedItem.className = 'placed-item';
     
-    // [수정됨] 색상을 동적으로 제어하므로 더 이상 별도 클래스를 추가할 필요가 없습니다.
-    // if (document.body.classList.contains('webcam-is-fullscreen')) {
-    //     placedItem.classList.add('placed-white');
-    // }
-
     placedItem.style.left = `${x}px`;
     placedItem.style.top = `${y}px`;
     placedItem.style.width = `${currentSize}px`;
